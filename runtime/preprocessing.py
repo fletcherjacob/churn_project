@@ -19,7 +19,8 @@ class SparkData:
         self.unique_users_count = None
 
     def clean_sdf(self):
-        self.sdf = self.sdf.dropna(subset="userId")
+        self.columns_to_keep = ['userId','artist','ts','page','level','location']
+        self.sdf = self.sdf.select(self.columns_to_keep).dropna(subset= 'userId')
         self.unique_users = self.sdf.select("userId").distinct()
         self.unique_users_count = self.unique_users.count()
         return self
@@ -133,6 +134,10 @@ class SparkData:
                 f"Missing Users {feature_name}: {self.unique_users_count - sdf_user_count}"
             )
             return sdf
+        
+
+
+        
 
     def build_features(self):
         self.build_song_counts()
@@ -142,8 +147,14 @@ class SparkData:
         self.build_user_unique_locations()
 
 
+
 def main():
     init_logging()
+    
+    try:
+        spark.stop()
+    except NameError:
+        pass
 
     # Create a Spark session with an appropriate app name and executor cores
     total_physical_cores = 16
@@ -159,8 +170,8 @@ def main():
 
     # Load Data To Spark Dataframe
     try:
-        path = input("Provide location of json data:")
-        "/Users/jacobfletcher/git/churn_project/data/mini_sparkify_event_data.json"
+        #path = input("Provide location of json data:")
+        path="/Users/jacobfletcher/git/churn_project/data/lg_sparkify_event_data.json"
         sdf = spark.read.json(path)
     except Exception as e:
         logging.error(f"Error reading JSON file: {e}")
