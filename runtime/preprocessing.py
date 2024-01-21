@@ -3,6 +3,7 @@ from pyspark.sql import SparkSession, DataFrame
 from pyspark.sql.types import IntegerType, StringType
 from pyspark.sql import functions as F
 from pyspark.sql.functions import col, from_unixtime, date_trunc, udf, lit
+from datetime import datetime
 
 
 
@@ -20,7 +21,7 @@ class SparkData:
                 self.sdf = self.spark.read.csv(path, header = True)
         except Exception as e:
             print(e)
-            logging.error("Make Sure File is a valid format('.csv' or '.json')")
+            self.app.error("Make Sure File is a valid format('.csv' or '.json')")
             exit()
 
         if preproccessing_job:
@@ -29,11 +30,13 @@ class SparkData:
         self.unique_users = None
         self.unique_users_count = None
 
-    
+    def get_log_time(self):
+        return datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
     def init_logging(self):
-        logging.basicConfig(level=logging.INFO)
-        logger = logging.getLogger(__name__)
-        logger.info("Logging initialized.")
+        logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        self.app = logging.getLogger("SPARKIFY")
+        self.app.info("Logging initialized %s.", self.get_log_time())
 
 
     def clean_sdf(self):
@@ -197,18 +200,11 @@ class SparkData:
         return self
 
 
-
-        num_rows = self.processed_sdf.count()
-        num_columns = len(self.processed_sdf.columns)
-        logging.info(f"Shape: ({num_rows}, {num_columns})")
-        logging.info(f"Total samples: {num_rows}")
-        logging.info(f"Pos Labels: {self.processed_sdf[['label']].groupBy().sum().collect()[0]['sum(label)']}")
-
     def export_file(self, output_path, file_type):
         if file_type  == "csv":
-            self.processed_sdf.coalesce(1).write.csv(output_path)
+            self.processed_sdf.coalesce(1).write.json(output_path, mode='overwrite')
         if file_type == 'json':
-            self.processed_sdf.coalesce(1).write.json(output_path)
+            self.processed_sdf.coalesce(1).write.json(output_path, mode='overwrite')
         else:
             logging.info(f"Please select eithe json or csv as filetype {str(file_type)} is not a suported format")
 
@@ -237,8 +233,8 @@ class SparkData:
     def preproccessing_run(self):
         self.clean_sdf()
         self.build_features()
-        output_path = input("File Outpu Path:")
-        file_type = input("File Type:")
+        output_path = "/Users/jacobfletcher/git/churn_project/data/lg_model_features"#input("File Outpu Path:")
+        file_type = "json"#input("File Type:")
         self.export_file(
             output_path=output_path,
             file_type=file_type
@@ -246,7 +242,8 @@ class SparkData:
     
 if __name__ == "__main__":
     # Instantiate the class and run preprocessing
-    path = input("Filepath: ")
+    #path = input("Filepath: ")
+    path ="/Users/jacobfletcher/git/churn_project/data/lg_sparkify_event_data.json"
     spark_data = SparkData(path=path)
     
  
