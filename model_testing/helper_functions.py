@@ -71,6 +71,8 @@ def load_dataframe(file_path, spark, feature_cols=None, label="label"):
         df = spark.read.option("header", "True").csv(file_path)
     elif file_path.endswith(".json"):
         df = spark.read.option("header", "True").json(file_path)
+    elif file_path.endswith(".parquet"):
+        df = spark.read.option("header", "True").read.parquet(file_path)
     else:
         raise ValueError("Unsupported file format. Supported formats: CSV, JSON")
 
