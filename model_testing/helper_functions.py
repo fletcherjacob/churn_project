@@ -26,7 +26,7 @@ def create_spark_session(
     try:
         spark.shutdown()
     except Exception as e:
-        print(e)
+        print("No Spark Sessions Active")
 
     if default_settings == False:
         total_physical_cores = input(" Available Cores")
@@ -58,17 +58,10 @@ def create_spark_session(
 
 
 def load_dataframe(file_path, spark, feature_cols=None, label="label"):
-    # Start Logging
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    )
-    app = logging.getLogger("SPARKIFY")
-    app.info("Logging initialized %s.", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
 
     # Determine which file to load
     if file_path.endswith(".csv"):
-        df = spark.read.option("header", "True").csv(file_path)
+        df = spark.read.option("header", "True").option("inferSchema", "true").csv(file_path)
     elif file_path.endswith(".json"):
         df = spark.read.option("header", "True").json(file_path)
     elif file_path.endswith(".parquet"):
@@ -78,17 +71,13 @@ def load_dataframe(file_path, spark, feature_cols=None, label="label"):
 
     # Drop unselected features
     if feature_cols:
-        for col_name in df.columns:
-            if col_name not in feature_cols and col_name != label:
-                app.warning(
-                    f"{col_name} feature is being dropped : {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
-                )
-                df = df.drop(col_name)
+        selected_cols = feature_cols + [label]
+        df = df.select(*selected_cols)
 
     # Cast all features as double, *Note Specific To Project Use Case, discretion if used outside of project
     df = df.select(*(col(c).cast("double").alias(c) for c in df.columns))
 
-    return df, app
+    return df
 
 
 def score_metrics(df,y_true_col,y_pred_col):
